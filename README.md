@@ -50,21 +50,16 @@ sh install.sh
 
 ## macOS Ventura or later setup
 
-Install Git and a Node.js release supported by both this project and your macOS version. The current Node.js LTS installers are available from [nodejs.org](https://nodejs.org/en/download/). Open Terminal and verify the tools:
+Open Terminal and run:
 
 ```bash
-node --version
-npm --version
-git --version
+curl -fsSLo macos-setup.sh https://raw.githubusercontent.com/wereallmadhereblip/Offgrid_Madhat/main/macos-setup.sh &&
+sh macos-setup.sh
 ```
 
-Node.js must be version 20 or later, and npm must be version 7 or later. Then clone and build the dashboard:
+This checks macOS and installs missing Git through Apple's Command Line Tools and, if needed, Node.js 22 from [nodejs.org](https://nodejs.org/en/download/). Approve the Apple installer dialog and wait for it to finish when prompted; installing Node.js requires an administrator password. The script verifies Git, Node.js 20+, and npm 7+, then clones and builds the dashboard in `Offgrid_Madhat`. It needs internet access and will not overwrite an existing destination. To use another destination, run `sh macos-setup.sh path/to/destination`.
 
-```bash
-git clone https://github.com/wereallmadhereblip/Offgrid_Madhat.git
-cd Offgrid_Madhat
-sh install.sh
-```
+The downloaded script can be inspected before running it. If an older Node.js from a version manager takes precedence in your terminal after installation, adjust your `PATH` or switch to Node.js 20+ before starting the dashboard. If the clone succeeds but the build fails, fix the reported error and run `cd Offgrid_Madhat && sh install.sh` instead of cloning again.
 
 ## Run the dashboard
 
