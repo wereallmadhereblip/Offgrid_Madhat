@@ -484,28 +484,37 @@ run_app() {
 print_summary() {
   log "Done"
   local line
+  echo
+  echo "════════════════════════════════════════════════════════════════"
+  echo "  🚀 SERVICES RUNNING IN BACKGROUND (Running on systemd)"
+  echo "════════════════════════════════════════════════════════════════"
   if [[ -f "$STATE_DIR/summary" ]]; then
-    while IFS= read -r line; do echo "  $line"; done <"$STATE_DIR/summary"
+    while IFS= read -r line; do echo "  ✓ $line"; done <"$STATE_DIR/summary"
   fi
+  echo "════════════════════════════════════════════════════════════════"
   if [[ -f "$STATE_DIR/admin" ]]; then
-    echo; echo "  $(cat "$STATE_DIR/admin")"
+    echo; echo "  🔐 $(cat "$STATE_DIR/admin")"
   fi
   if [[ -f "$STATE_DIR/manual" ]]; then
     echo
-    echo "systemd is not running here, so these were NOT started. Run them yourself:"
-    while IFS= read -r line; do echo "  $line"; done <"$STATE_DIR/manual"
+    echo "  ⚠️  systemd is not running here, so these were NOT started:"
+    while IFS= read -r line; do echo "  🔗 $line"; done <"$STATE_DIR/manual"
   fi
   echo
-  echo "Not installed automatically: Offline Maps (needs your own map data and server) and Notes"
-  echo "(FlatNotes recommends Docker). Add their addresses under Configure services in the dashboard."
+  echo "  ℹ️  Not installed automatically:"
+  echo "     • Offline Maps (needs your own map data and server)"
+  echo "     • Notes (FlatNotes recommends Docker)"
+  echo "     Add their addresses under Configure services in the dashboard."
   if [[ ${#FAILED[@]} -gt 0 ]]; then
     echo
+    echo "  ❌ These failed and can be retried with:"
     local failed_apps
     failed_apps="$(IFS=,; echo "${FAILED[*]}")"
-    echo "These failed and can be retried with: bash setup.sh --apps $failed_apps"
-    printf '  %s\n' "${FAILED[@]}"
+    echo "     bash setup.sh --apps $failed_apps"
+    printf '     • %s\n' "${FAILED[@]}"
     return 1
   fi
+  echo
 }
 
 main() {
