@@ -42,4 +42,4 @@ fi
 
 npm ci --no-audit --no-fund
 npm run build
-printf '\n%s\n' 'Installation complete. Start the dashboard with: npm start' 'Open the local URL printed by npm start (usually http://127.0.0.1:4173).'
+printf '\n%s\n' 'Installation complete. Start the dashboard with: npm start' 'Open http://127.0.0.1:4173. The default admin password is madhat; change it in Settings.'

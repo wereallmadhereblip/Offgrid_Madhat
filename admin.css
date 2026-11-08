@@ -1,0 +1,5 @@
+.auth-fields{display:grid;grid-template-columns:1fr;gap:15px}.auth-fields label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700;color:#45533e}.auth-fields input{width:100%;border:1px solid #c8d0c3;border-radius:4px;background:white;padding:10px;color:#283126;font-size:13px}.primary-button:disabled,.text-button:disabled{cursor:wait;opacity:.7}.admin-actions{display:flex;align-items:center;gap:22px}.tile-wrap{display:flex;flex-direction:column;gap:6px}.tile-wrap .service-tile{flex:1}.update-button{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:4px;background:#d8aa6a;color:#2b2314;font-size:12px;font-weight:700;text-decoration:none}.update-button:hover{background:#e3bb80}@media(max-width:560px){.admin-actions{gap:12px}}
+
+.password-form{margin-top:28px;padding-top:20px;border-top:1px solid #dce1d7}
+.password-form h3{font-family:Georgia,serif;font-size:18px;margin:0 0 14px;color:#303b28}
+.form-success{color:#2f6b3a;font-size:12px}
