@@ -14,6 +14,7 @@ ASSUME_YES=false
 DRY_RUN=false
 INSTALL_ROOT="${OFFGRID_HOME:-$HOME/.local/share/offgrid-madhat}"
 BIND="${OFFGRID_BIND:-127.0.0.1}"
+DASHBOARD_BIND="${OFFGRID_BIND:-0.0.0.0}"
 FAILED=()
 ADMIN_NOTE=""
 STATE_DIR="$(mktemp -d)"
@@ -31,7 +32,7 @@ Usage: bash setup.sh [--apps LIST] [--yes] [--dry-run] [--help]
 Environment variables:
   OFFGRID_APPS            Same as --apps.
   OFFGRID_HOME            Where app files and data live (default: ~/.local/share/offgrid-madhat).
-  OFFGRID_BIND            Address the apps listen on (default: 127.0.0.1; use 0.0.0.0 for your network).
+  OFFGRID_BIND            Override the listening address (dashboard default: 0.0.0.0; other apps: 127.0.0.1).
   OFFGRID_ADMIN_PASSWORD  Dashboard admin password (8+ characters). Default: madhat, changeable in the dashboard.
   OLLAMA_MODEL            Model to download after installing Ollama (for example llama3.2:1b).
   KIWIX_ZIM_URL           Direct URL of a .zim file to download for Kiwix.
@@ -118,6 +119,9 @@ confirm() {
   echo "This will install: $APPS"
   echo "Files and data: $INSTALL_ROOT"
   echo "It uses sudo for system packages and services, and downloads several GB if you choose AI models or Kiwix content."
+  if wants dashboard && [[ "$DASHBOARD_BIND" != 127.0.0.1 ]]; then
+    echo "The dashboard will listen on $DASHBOARD_BIND. Use a trusted network or HTTPS and change the default admin password."
+  fi
   if [[ ! -t 0 ]]; then
     die "Not running in a terminal. Re-run with --yes to confirm."
   fi
@@ -181,13 +185,25 @@ WantedBy=multi-user.target"
   fi
   if ! has_systemd; then
     [[ "${SERVICE_ENABLE:-true}" == true ]] || return 0
-    add_manual "$description: $execstart"
+    local manual_env="" quoted
+    for item in "$@"; do
+      printf -v quoted '%q' "$item"
+      manual_env+=" $quoted"
+    done
+    add_manual "$description: env$manual_env $execstart"
     return 0
+  fi
+  local was_active=false
+  if [[ "$name" == dashboard ]] && systemctl is-active --quiet "offgrid-$name.service"; then
+    was_active=true
   fi
   printf '%s\n' "$content" | $SUDO tee "$unit" >/dev/null
   $SUDO systemctl daemon-reload
   if [[ "${SERVICE_ENABLE:-true}" == true ]]; then
     $SUDO systemctl enable --now "offgrid-$name.service"
+    if $was_active; then
+      $SUDO systemctl restart "offgrid-$name.service"
+    fi
   fi
 }
 
@@ -199,6 +215,7 @@ install_dashboard() {
     node_major="$(node -p 'Number(process.versions.node.split(".")[0])')"
     [[ "$node_major" -ge 20 ]] || die "Node.js 20 or later is required (found $(node --version)). Install a current LTS from https://nodejs.org/en/download/ and re-run."
   fi
+  run mkdir -p "$INSTALL_ROOT"
   run sh "$SCRIPT_DIR/install.sh"
 
   if [[ -n "${OFFGRID_ADMIN_PASSWORD:-}" ]]; then
@@ -215,8 +232,12 @@ install_dashboard() {
   fi
 
   install_service dashboard "Offgrid Madhat dashboard" "$(command -v node || echo node) $SCRIPT_DIR/server.mjs" \
-    "OFFGRID_HOST=$BIND" "OFFGRID_PORT=4173"
+    "OFFGRID_HOST=$DASHBOARD_BIND" "OFFGRID_PORT=4173"
   add_summary "Dashboard          http://127.0.0.1:4173"
+  if [[ "$DASHBOARD_BIND" != 127.0.0.1 ]]; then
+    add_summary "Network access: use http://<this-computer-IP>:4173 from another computer (find the IP with hostname -I)."
+    add_summary "Network access depends on firewall and network settings; change the default admin password and use HTTPS or a trusted network."
+  fi
 }
 
 install_ollama() {

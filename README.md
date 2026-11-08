@@ -19,7 +19,11 @@ bash setup.sh --dry-run  # show the plan only
 
 Apps: `dashboard`, `ollama`, `openwebui` (8080), `kolibri` (8082), `kiwix` (8081), `jellyfin` (8096), `cyberchef` (8083), `meshtastic` (8450). Each is installed independently; a failure is reported at the end and does not stop the others. With systemd, services are named `offgrid-<app>` (Ollama and Jellyfin use their own units).
 
-Environment variables: `OFFGRID_APPS`, `OFFGRID_HOME` (default `~/.local/share/offgrid-madhat`), `OFFGRID_BIND` (default `127.0.0.1`), `OFFGRID_ADMIN_PASSWORD` (optional; default admin password is `madhat`), `OLLAMA_MODEL` (optional model to pull), `KIWIX_ZIM_URL` (optional ZIM to download).
+The dashboard service listens on all IPv4 interfaces by default, so other computers can open `http://<dashboard-computer-IP>:4173`. Find the address with `hostname -I`; network and firewall settings must permit TCP port 4173. Set `OFFGRID_BIND=127.0.0.1` when running setup to restrict it to the local computer. **Change the default admin password** and use HTTPS or a trusted network: dashboard passwords otherwise travel over plain HTTP.
+
+For an existing systemd installation, update the checkout and rerun `bash setup.sh --apps dashboard --yes` to apply the new default; this restarts the dashboard service. Existing installations are not changed automatically by updating the files.
+
+Environment variables: `OFFGRID_APPS`, `OFFGRID_HOME` (default `~/.local/share/offgrid-madhat`), `OFFGRID_BIND` (optional override for app listening addresses; dashboard defaults to `0.0.0.0`, other managed apps to `127.0.0.1`), `OFFGRID_ADMIN_PASSWORD` (optional; default admin password is `madhat`), `OLLAMA_MODEL` (optional model to pull), `KIWIX_ZIM_URL` (optional ZIM to download).
 
 Limits: Maps and Notes are not auto-installed. Kiwix needs at least one `.zim` file in its `library/` folder before it starts. Open WebUI asks you to create the first account on first visit. On Kali, the Jellyfin installer asks for repo OS/release (`debian` / `trixie`). The Meshcore-Madhat bot itself is not installed; only its installer pattern is reused.
 
@@ -50,7 +54,7 @@ sh install.sh
 
 ## Run the dashboard
 
-Start the local web server from the project directory:
+When installed with `setup.sh` on a system with systemd, the dashboard service starts automatically. For a dashboard-only installation with `install.sh`, start the web server from the project directory:
 
 ```bash
 npm start
@@ -66,7 +70,7 @@ Check the installed versions with `node --version` and `npm --version`. This pro
 
 ### Dashboard does not open
 
-Make sure `npm start` is still running and use the URL printed in its terminal. If port 4173 is occupied, set a different `OFFGRID_PORT`.
+For a systemd installation, check `systemctl status offgrid-dashboard`; otherwise make sure `npm start` is still running. If port 4173 is occupied, set a different `OFFGRID_PORT` for a manual start. For network access, check the dashboard computer's IP address and firewall.
 
 ### A service tile does not work
 
@@ -107,7 +111,7 @@ Every 24 hours the server asks each supported app for its installed version and 
 
 Limits: the dashboard never installs or updates apps itself. Other apps (Kiwix, maps, CyberChef, notes, Meshtastic Web, Ollama) do not expose a version this way and are not checked. Checks need internet access to reach GitHub; offline, the installed version is still read but no update can be reported. The server fetches the addresses admins configure, so only trusted people should have the admin password. The version endpoints above are expected from each project's API and may change between releases.
 
-The server listens only on `127.0.0.1` by default. To let others on your network use it, set `OFFGRID_HOST=0.0.0.0` and put it behind HTTPS or a trusted network, since admin passwords are sent in plain HTTP otherwise.
+The `setup.sh` dashboard service listens on `0.0.0.0` by default; a manually started server listens on `127.0.0.1` unless `OFFGRID_HOST` is set. Use HTTPS or a trusted network when exposing it, since admin passwords are sent in plain HTTP otherwise.
 
 ## Native service setup
 
@@ -126,7 +130,7 @@ There is no single Docker-free installer for all these services. Their upstream 
 
 The dashboard links to these services but does not install or supervise them. In particular, do not treat FlatNotes as a supported Docker-free install.
 
-The dashboard listens only on `127.0.0.1` by default. Localhost addresses refer to the computer running the browser. Do not expose the dashboard or linked services to a network without configuring appropriate authentication and access controls.
+Localhost addresses refer to the computer running the browser. Do not expose the dashboard or linked services to an untrusted network without configuring appropriate authentication and access controls.
 
 ## Development
 
