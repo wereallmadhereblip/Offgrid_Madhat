@@ -147,17 +147,37 @@ setup_sudo() {
 }
 
 apt_install() {
-  run $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"
+  local retries=0 max_retries=3 status
+  while [[ $retries -lt $max_retries ]]; do
+    if $DRY_RUN; then
+      printf '[dry-run] %s env DEBIAN_FRONTEND=noninteractive apt-get install -y %s\n' "$SUDO" "$*"
+      return 0
+    fi
+    $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y "$@"
+    status=$?
+    if [[ $status -eq 0 ]]; then
+      return 0
+    elif [[ $status -eq 139 ]]; then
+      # Segmentation fault (139) - ARM/dpkg issue, retry
+      warn "apt segfault (attempt $((retries + 1))/$max_retries), retrying in 5 seconds..."
+      sleep 5
+      ((retries++))
+    else
+      # Other error, don't retry
+      die "apt install failed with exit code $status"
+    fi
+  done
+  die "apt install failed after $max_retries attempts (segmentation faults)"
 }
 
 install_base() {
   log "Installing base tools"
-  run $SUDO apt-get update
+  run $SUDO apt-get update || warn "apt-get update failed, continuing anyway..."
   local packages=(git curl ca-certificates tar unzip gzip openssl python3 python3-venv python3-pip)
   wants dashboard && packages+=(nodejs npm)
   wants ollama && packages+=(zstd)
   wants kiwix && packages+=(kiwix-tools)
-  apt_install "${packages[@]}"
+  apt_install "${packages[@]}" || die "Failed to install base packages"
   if ! $DRY_RUN; then
     printf 'python3 %s\n' "$(python3 --version 2>&1 | cut -d' ' -f2)"
   fi
