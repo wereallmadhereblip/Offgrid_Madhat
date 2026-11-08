@@ -21,7 +21,7 @@ trap 'rm -rf "$STATE_DIR"' EXIT
 
 usage() {
   cat <<EOF
-Usage: bash ${OFFGRID_SETUP_SCRIPT:-setup.sh} [--apps LIST] [--yes] [--dry-run] [--help]
+Usage: bash setup.sh [--apps LIST] [--yes] [--dry-run] [--help]
 
   --apps LIST  Comma-separated apps to install (default: all).
                Choices: ${ALL_APPS// /, }
@@ -80,7 +80,6 @@ check_platform() {
 
   case "$(uname -s)" in
     Linux) ;;
-    Darwin) die "App installation is supported on Debian-based Linux only. On macOS, run: sh install.sh" ;;
     *) die "This installer supports Debian-based Linux only." ;;
   esac
 

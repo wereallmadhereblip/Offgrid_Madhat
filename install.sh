@@ -12,17 +12,10 @@ case "$(uname -s)" in
     . /etc/os-release
     case "${ID:-} ${ID_LIKE:-}" in
       *debian*|*kali*) ;;
-      *) printf '%s\n' 'This installer supports Debian-based Linux and macOS 13 or later.' >&2; exit 1 ;;
+      *) printf '%s\n' 'This installer supports Debian-based Linux only.' >&2; exit 1 ;;
     esac
     ;;
-  Darwin)
-    mac_major=$(sw_vers -productVersion | cut -d. -f1)
-    if [ "$mac_major" -lt 13 ]; then
-      printf '%s\n' 'macOS Ventura (13) or later is required.' >&2
-      exit 1
-    fi
-    ;;
-  *) printf '%s\n' 'This installer supports Debian-based Linux and macOS 13 or later.' >&2; exit 1 ;;
+  *) printf '%s\n' 'This installer supports Debian-based Linux only.' >&2; exit 1 ;;
 esac
 
 if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then

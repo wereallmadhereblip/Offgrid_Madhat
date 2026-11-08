@@ -1,8 +1,8 @@
 # Offgrid Madhat
 
-A Docker-free, NOMAD-inspired command center for opening your own offline services. The dashboard runs locally on Kali Linux, Debian 13 (Trixie), and macOS Ventura (13) or later on supported Node.js hardware.
+A Docker-free, NOMAD-inspired command center for opening your own offline services. The supported installers run on Debian-based Linux, including Kali Linux and Debian 13 (Trixie).
 
-This is an independent dashboard, not Project NOMAD. The dashboard itself does not install, start, or update linked applications or download offline content. The native setup scripts below can install several linked applications separately; they do not reproduce NOMAD's Docker-based app catalog, AI, maps, or knowledge base.
+This is an independent dashboard, not Project NOMAD. The dashboard itself does not install, start, or update linked applications or download offline content. The native setup script can install several linked applications separately; it does not reproduce NOMAD's Docker-based app catalog, AI, maps, or knowledge base.
 
 ## One-command install (Debian / Kali / Ubuntu)
 
@@ -21,7 +21,7 @@ Apps: `dashboard`, `ollama`, `openwebui` (8080), `kolibri` (8082), `kiwix` (8081
 
 Environment variables: `OFFGRID_APPS`, `OFFGRID_HOME` (default `~/.local/share/offgrid-madhat`), `OFFGRID_BIND` (default `127.0.0.1`), `OFFGRID_ADMIN_PASSWORD` (optional; default admin password is `madhat`), `OLLAMA_MODEL` (optional model to pull), `KIWIX_ZIM_URL` (optional ZIM to download).
 
-Limits: Maps and Notes are not auto-installed. Kiwix needs at least one `.zim` file in its `library/` folder before it starts. Open WebUI asks you to create the first account on first visit. On Kali, the Jellyfin installer asks for repo OS/release (`debian` / `trixie`). `setup.sh` is Linux-only; use the macOS instructions below on a Mac. The Meshcore-Madhat bot itself is not installed; only its installer pattern is reused.
+Limits: Maps and Notes are not auto-installed. Kiwix needs at least one `.zim` file in its `library/` folder before it starts. Open WebUI asks you to create the first account on first visit. On Kali, the Jellyfin installer asks for repo OS/release (`debian` / `trixie`). The Meshcore-Madhat bot itself is not installed; only its installer pattern is reused.
 
 ## Kali Linux / Debian 13 setup
 
@@ -47,35 +47,6 @@ git clone https://github.com/wereallmadhereblip/Offgrid_Madhat.git
 cd Offgrid_Madhat
 sh install.sh
 ```
-
-## macOS Ventura or later setup
-
-Open Terminal and run:
-
-```bash
-curl -fsSLo macos-setup.sh https://raw.githubusercontent.com/wereallmadhereblip/Offgrid_Madhat/main/macos-setup.sh &&
-sh macos-setup.sh
-```
-
-This checks macOS and installs missing Git through Apple's Command Line Tools and, if needed, Node.js 22 from [nodejs.org](https://nodejs.org/en/download/). Approve the Apple installer dialog and wait for it to finish when prompted; installing Node.js requires an administrator password. The script clones into `Offgrid_Madhat` and asks before installing the same app selections as the Linux installer. It needs internet access and will not overwrite an existing destination. Install [Homebrew](https://brew.sh/) first for apps other than the dashboard; Homebrew may also require administrator access.
-
-```bash
-sh macos-setup.sh --yes                           # install all selections
-sh macos-setup.sh my-folder --apps dashboard,ollama --yes
-
-# If you already cloned the project, or to retry failed apps:
-cd Offgrid_Madhat
-git pull
-bash macos-apps.sh --dry-run                      # preview selections
-bash macos-apps.sh --apps dashboard,ollama --yes
-bash macos-apps.sh --yes                          # all selections
-```
-
-The macOS installer accepts the same app names and environment variables listed above. It installs Ollama, Jellyfin, Kiwix, Python, Open WebUI, Kolibri, CyberChef and Meshtastic Web natively, and sets up per-user launchd services for the dashboard, Ollama, Open WebUI, Kolibri, CyberChef, Meshtastic Web and Jellyfin. These start while the installing user is logged in; logs are in `~/.local/share/offgrid-madhat/logs` (or `$OFFGRID_HOME/logs`). Jellyfin runs as a macOS application and needs its setup wizard. First-time Open WebUI setup creates an admin account. AI models, ZIMs, education content, and media are not included; use `OLLAMA_MODEL` or `KIWIX_ZIM_URL` to download a model or ZIM during setup.
-
-**Kiwix limitation:** macOS installs the Kiwix desktop app, not the Linux `kiwix-serve` web service. Open the app and import ZIM files from `~/.local/share/offgrid-madhat/kiwix/library` (or `$OFFGRID_HOME/kiwix/library`). The dashboard's Information Library tile requires a separately configured Kiwix web server. The current Homebrew Kiwix cask requires macOS 14 or newer; on Ventura its installation can fail, and the installer reports the failure and continues with the other apps. Maps and Notes remain separate installations.
-
-The downloaded script can be inspected before running it. If an older Node.js from a version manager takes precedence in your terminal after installation, adjust your `PATH` or switch to Node.js 20+ before starting the dashboard. If the clone succeeds but app setup fails, retry from the existing checkout with `bash macos-apps.sh --apps ...` rather than cloning again.
 
 ## Run the dashboard
 
@@ -146,17 +117,17 @@ There is no single Docker-free installer for all these services. Their upstream 
 | --- | --- |
 | Kiwix | Use the official [Kiwix tools project](https://github.com/kiwix/kiwix-tools) and obtain ZIM archives separately. Check its current packages for your OS. |
 | Kolibri | Use the official [Kolibri download page](https://learningequality.org/download/) for platform-specific installers and content. |
-| AI Assistant | [Ollama](https://ollama.com/download) provides native installers; [Open WebUI](https://docs.openwebui.com/getting-started/quick-start/) documents a Python install route. Check Ollama's current macOS requirements before using Ventura. AI models require separate downloads and storage. |
+| AI Assistant | [Ollama](https://ollama.com/download) provides native installers; [Open WebUI](https://docs.openwebui.com/getting-started/quick-start/) documents a Python install route. AI models require separate downloads and storage. |
 | Offline Maps | [PMTiles](https://github.com/protomaps/PMTiles) is a map archive format, not a complete map server. You need compatible map data and a viewer. |
 | Data Tools | [CyberChef](https://github.com/gchq/CyberChef) can be built from source without Docker; its current source instructions require Node.js 24, separate from this dashboard's Node.js 20 minimum. |
 | Media Library | Use the official [Jellyfin downloads](https://jellyfin.org/downloads/) for native server packages. Check current support for your OS, and add your own media libraries separately. |
 | Notes | [FlatNotes](https://github.com/dullage/flatnotes) recommends Docker for self-hosting and does not document a supported native install path. |
 | Mesh Communications | [Meshtastic Web](https://github.com/meshtastic/web) is the browser client; actual radio communication requires compatible Meshtastic hardware and browser connectivity support. |
 
-The dashboard links to these services but does not install or supervise them. In particular, do not treat FlatNotes as a supported Docker-free install, or assume every native app supports macOS Ventura just because the dashboard does.
+The dashboard links to these services but does not install or supervise them. In particular, do not treat FlatNotes as a supported Docker-free install.
 
 The dashboard listens only on `127.0.0.1` by default. Localhost addresses refer to the computer running the browser. Do not expose the dashboard or linked services to a network without configuring appropriate authentication and access controls.
 
 ## Development
 
-Run `npm start` in one terminal and `npm run dev` in another for the Vite development server, which proxies `/api` to port 4173, or run `npm run build` to rebuild after changes. Run `npm ci` to reinstall the locked dependencies. GitHub Actions checks the dashboard build on Ubuntu 24.04 and macOS 14/15 with Node.js 20, 22, and 24; these checks do not install or validate the service backends, Kali, Debian Trixie, or macOS Ventura.
+Run `npm start` in one terminal and `npm run dev` in another for the Vite development server, which proxies `/api` to port 4173, or run `npm run build` to rebuild after changes. Run `npm ci` to reinstall the locked dependencies. GitHub Actions checks the dashboard build on Ubuntu 24.04 with Node.js 20, 22, and 24; these checks do not install or validate the service backends, Kali, or Debian Trixie.
