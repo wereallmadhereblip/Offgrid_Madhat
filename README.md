@@ -2,7 +2,7 @@
 
 A Docker-free, NOMAD-inspired command center for opening your own offline services. The dashboard runs locally on Kali Linux, Debian 13 (Trixie), and macOS Ventura (13) or later on supported Node.js hardware.
 
-This is an independent dashboard, not Project NOMAD. It does **not** install, start, monitor, or update the linked applications, download offline content, or reproduce NOMAD's Docker-based app catalog, AI, maps, or knowledge base. Install and configure those separately before using their shortcuts.
+This is an independent dashboard, not Project NOMAD. The dashboard itself does not install, start, or update linked applications or download offline content. The native setup scripts below can install several linked applications separately; they do not reproduce NOMAD's Docker-based app catalog, AI, maps, or knowledge base.
 
 ## One-command install (Debian / Kali / Ubuntu)
 
@@ -21,7 +21,7 @@ Apps: `dashboard`, `ollama`, `openwebui` (8080), `kolibri` (8082), `kiwix` (8081
 
 Environment variables: `OFFGRID_APPS`, `OFFGRID_HOME` (default `~/.local/share/offgrid-madhat`), `OFFGRID_BIND` (default `127.0.0.1`), `OFFGRID_ADMIN_PASSWORD` (optional; default admin password is `madhat`), `OLLAMA_MODEL` (optional model to pull), `KIWIX_ZIM_URL` (optional ZIM to download).
 
-Limits: Maps and Notes are not auto-installed. Kiwix needs at least one `.zim` file in its `library/` folder before it starts. Open WebUI asks you to create the first account on first visit. On Kali, the Jellyfin installer asks for repo OS/release (`debian` / `trixie`). macOS is not supported by `setup.sh`. The Meshcore-Madhat bot itself is not installed; only its installer pattern is reused.
+Limits: Maps and Notes are not auto-installed. Kiwix needs at least one `.zim` file in its `library/` folder before it starts. Open WebUI asks you to create the first account on first visit. On Kali, the Jellyfin installer asks for repo OS/release (`debian` / `trixie`). `setup.sh` is Linux-only; use the macOS instructions below on a Mac. The Meshcore-Madhat bot itself is not installed; only its installer pattern is reused.
 
 ## Kali Linux / Debian 13 setup
 
@@ -57,9 +57,25 @@ curl -fsSLo macos-setup.sh https://raw.githubusercontent.com/wereallmadhereblip/
 sh macos-setup.sh
 ```
 
-This checks macOS and installs missing Git through Apple's Command Line Tools and, if needed, Node.js 22 from [nodejs.org](https://nodejs.org/en/download/). Approve the Apple installer dialog and wait for it to finish when prompted; installing Node.js requires an administrator password. The script verifies Git, Node.js 20+, and npm 7+, then clones and builds the dashboard in `Offgrid_Madhat`. It needs internet access and will not overwrite an existing destination. To use another destination, run `sh macos-setup.sh path/to/destination`.
+This checks macOS and installs missing Git through Apple's Command Line Tools and, if needed, Node.js 22 from [nodejs.org](https://nodejs.org/en/download/). Approve the Apple installer dialog and wait for it to finish when prompted; installing Node.js requires an administrator password. The script clones into `Offgrid_Madhat` and asks before installing the same app selections as the Linux installer. It needs internet access and will not overwrite an existing destination. Install [Homebrew](https://brew.sh/) first for apps other than the dashboard; Homebrew may also require administrator access.
 
-The downloaded script can be inspected before running it. If an older Node.js from a version manager takes precedence in your terminal after installation, adjust your `PATH` or switch to Node.js 20+ before starting the dashboard. If the clone succeeds but the build fails, fix the reported error and run `cd Offgrid_Madhat && sh install.sh` instead of cloning again.
+```bash
+sh macos-setup.sh --yes                           # install all selections
+sh macos-setup.sh my-folder --apps dashboard,ollama --yes
+
+# If you already cloned the project, or to retry failed apps:
+cd Offgrid_Madhat
+git pull
+bash macos-apps.sh --dry-run                      # preview selections
+bash macos-apps.sh --apps dashboard,ollama --yes
+bash macos-apps.sh --yes                          # all selections
+```
+
+The macOS installer accepts the same app names and environment variables listed above. It installs Ollama, Jellyfin, Kiwix, Python, Open WebUI, Kolibri, CyberChef and Meshtastic Web natively, and sets up per-user launchd services for the dashboard, Ollama, Open WebUI, Kolibri, CyberChef, Meshtastic Web and Jellyfin. These start while the installing user is logged in; logs are in `~/.local/share/offgrid-madhat/logs` (or `$OFFGRID_HOME/logs`). Jellyfin runs as a macOS application and needs its setup wizard. First-time Open WebUI setup creates an admin account. AI models, ZIMs, education content, and media are not included; use `OLLAMA_MODEL` or `KIWIX_ZIM_URL` to download a model or ZIM during setup.
+
+**Kiwix limitation:** macOS installs the Kiwix desktop app, not the Linux `kiwix-serve` web service. Open the app and import ZIM files from `~/.local/share/offgrid-madhat/kiwix/library` (or `$OFFGRID_HOME/kiwix/library`). The dashboard's Information Library tile requires a separately configured Kiwix web server. The current Homebrew Kiwix cask requires macOS 14 or newer; on Ventura its installation can fail, and the installer reports the failure and continues with the other apps. Maps and Notes remain separate installations.
+
+The downloaded script can be inspected before running it. If an older Node.js from a version manager takes precedence in your terminal after installation, adjust your `PATH` or switch to Node.js 20+ before starting the dashboard. If the clone succeeds but app setup fails, retry from the existing checkout with `bash macos-apps.sh --apps ...` rather than cloning again.
 
 ## Run the dashboard
 
@@ -83,7 +99,7 @@ Make sure `npm start` is still running and use the URL printed in its terminal. 
 
 ### A service tile does not work
 
-The dashboard does not install or start its linked services. Install the service separately, make sure it is running, then choose **Configure services** and enter its correct HTTP or HTTPS address.
+The dashboard does not itself install or start linked services. Use the appropriate setup script or install the service separately, make sure it is running, then choose **Configure services** and enter its correct HTTP or HTTPS address.
 
 ## Connect services
 

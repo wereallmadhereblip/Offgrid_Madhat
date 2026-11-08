@@ -18,8 +18,11 @@ case "$(uname -m)" in
   *) fail 'This installer supports Apple silicon and Intel Macs only.' ;;
 esac
 
-destination="${1:-Offgrid_Madhat}"
-[ "$#" -le 1 ] || fail 'Usage: sh macos-setup.sh [destination]'
+destination=Offgrid_Madhat
+case "${1:-}" in
+  ''|--*|-y|-h) ;;
+  *) destination=$1; shift ;;
+esac
 [ ! -e "$destination" ] && [ ! -L "$destination" ] ||
   fail "Destination already exists: $destination. Choose another destination; existing files will not be changed."
 
@@ -67,5 +70,4 @@ fi
 
 printf 'Node.js: %s\nnpm: %s\n' "$(node --version)" "$(npm --version)"
 git clone https://github.com/wereallmadhereblip/Offgrid_Madhat.git "$destination"
-(cd "$destination" && sh install.sh)
-printf '\n%s\n' "Dashboard built in: $destination" "To start it: cd \"$destination\" && npm start"
+(cd "$destination" && bash macos-apps.sh "$@")

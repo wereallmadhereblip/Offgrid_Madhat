@@ -21,7 +21,7 @@ trap 'rm -rf "$STATE_DIR"' EXIT
 
 usage() {
   cat <<EOF
-Usage: bash setup.sh [--apps LIST] [--yes] [--dry-run] [--help]
+Usage: bash ${OFFGRID_SETUP_SCRIPT:-setup.sh} [--apps LIST] [--yes] [--dry-run] [--help]
 
   --apps LIST  Comma-separated apps to install (default: all).
                Choices: ${ALL_APPS// /, }

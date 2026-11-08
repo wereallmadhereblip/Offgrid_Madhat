@@ -18,7 +18,7 @@ function fixture(t, options = {}) {
   mock('git', `if [ "$1" = --version ]; then echo 'git version 2.40'; else
     echo clone >> "$TEST_LOG"
     mkdir -p "$3"
-    printf '%s\\n' '#!/bin/sh' 'echo build >> "$TEST_LOG"' > "$3/install.sh"
+    printf '%s\\n' '#!/bin/sh' 'printf "apps %s\\n" "$*" >> "$TEST_LOG"' > "$3/macos-apps.sh"
   fi`);
   mock('node', `if [ "$1" = -p ]; then echo "${options.nodeMajor || '22'}"; else echo v22.1.0; fi`);
   mock('npm', `echo "${options.npmVersion || '10.0.0'}"`);
@@ -46,14 +46,14 @@ function fixture(t, options = {}) {
   return { dir, run, events };
 }
 
-test('clones and builds with existing compatible tools', t => {
+test('clones and forwards app options with existing compatible tools', t => {
   const f = fixture(t);
-  const result = f.run('dashboard');
+  const result = f.run('dashboard', '--apps', 'ollama,kiwix', '--yes');
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /git version 2\.40/);
   assert.match(result.stdout, /Node\.js: v22\.1\.0/);
   assert.match(result.stdout, /npm: 10\.0\.0/);
-  assert.equal(f.events(), 'clone\nbuild\n');
+  assert.equal(f.events(), 'clone\napps --apps ollama,kiwix --yes\n');
 });
 
 test('rejects unsupported macOS and existing destinations before changes', t => {
