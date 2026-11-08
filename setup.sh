@@ -70,10 +70,20 @@ wants() { [[ " $APPS " == *" $1 "* ]]; }
 system_python() { command -v /usr/bin/python3 || command -v python3 || echo python3; }
 has_systemd() { [[ -d /run/systemd/system ]] && command -v systemctl >/dev/null 2>&1; }
 
-# Downloads a file to a temporary path so a partial download is never executed.
+# Downloads a file to a temporary path with validation and retries on failure.
 download() {
-  local url="$1" target="$2"
-  run curl -fsSL --retry 3 --connect-timeout 15 "$url" -o "$target"
+  local url="$1" target="$2" retries=0 max_retries=3
+  while [[ $retries -lt $max_retries ]]; do
+    if run curl -fsSL --retry 3 --connect-timeout 15 --max-time 120 "$url" -o "$target"; then
+      return 0
+    fi
+    ((retries++))
+    if [[ $retries -lt $max_retries ]]; then
+      warn "Download failed (attempt $retries/$max_retries), retrying in 5 seconds..."
+      sleep 5
+    fi
+  done
+  die "Failed to download $url after $max_retries attempts."
 }
 
 check_platform() {
@@ -216,13 +226,13 @@ install_dashboard() {
     [[ "$node_major" -ge 20 ]] || die "Node.js 20 or later is required (found $(node --version)). Install a current LTS from https://nodejs.org/en/download/ and re-run."
   fi
   run mkdir -p "$INSTALL_ROOT"
-  run sh "$SCRIPT_DIR/install.sh"
+  run sh "$SCRIPT_DIR/install.sh" || die "Dashboard installation (install.sh) failed."
 
   if [[ -n "${OFFGRID_ADMIN_PASSWORD:-}" ]]; then
     if $DRY_RUN; then
       echo "[dry-run] set the dashboard admin password from OFFGRID_ADMIN_PASSWORD"
     else
-      (cd "$SCRIPT_DIR" && node server.mjs --set-admin-password)
+      (cd "$SCRIPT_DIR" && node server.mjs --set-admin-password) || die "Failed to set dashboard admin password."
     fi
     add_admin_note "Dashboard admin password set from OFFGRID_ADMIN_PASSWORD."
   elif [[ -f "$SCRIPT_DIR/data/admin.json" ]]; then
@@ -275,10 +285,18 @@ install_openwebui() {
   log "Installing Open WebUI"
   local dir="$INSTALL_ROOT/open-webui"
   run mkdir -p "$dir/data"
-  run python3 -m venv "$dir/uv-env"
-  run "$dir/uv-env/bin/pip" install --quiet --upgrade uv
-  run "$dir/uv-env/bin/uv" venv --python 3.12 --allow-existing "$dir/venv"
-  run "$dir/uv-env/bin/uv" pip install --python "$dir/venv/bin/python" --upgrade open-webui
+  if ! $DRY_RUN; then
+    command -v python3 >/dev/null 2>&1 || die "python3 is required for Open WebUI."
+    run python3 -m venv "$dir/uv-env" || die "Failed to create Python venv for uv."
+    run "$dir/uv-env/bin/pip" install --quiet --upgrade uv || die "Failed to install uv."
+    run "$dir/uv-env/bin/uv" venv --python 3.12 --allow-existing "$dir/venv" || die "Failed to create Python 3.12 venv."
+    run "$dir/uv-env/bin/uv" pip install --python "$dir/venv/bin/python" --upgrade open-webui || die "Failed to install open-webui."
+  else
+    run python3 -m venv "$dir/uv-env"
+    run "$dir/uv-env/bin/pip" install --quiet --upgrade uv
+    run "$dir/uv-env/bin/uv" venv --python 3.12 --allow-existing "$dir/venv"
+    run "$dir/uv-env/bin/uv" pip install --python "$dir/venv/bin/python" --upgrade open-webui
+  fi
   install_service openwebui "Open WebUI" \
     "$dir/venv/bin/open-webui serve --host $BIND --port 8080" \
     "DATA_DIR=$dir/data" "OLLAMA_BASE_URL=http://127.0.0.1:11434"
@@ -289,8 +307,14 @@ install_kolibri() {
   log "Installing Kolibri"
   local dir="$INSTALL_ROOT/kolibri"
   run mkdir -p "$dir/data"
-  run python3 -m venv "$dir/venv"
-  run "$dir/venv/bin/pip" install --quiet --upgrade pip kolibri
+  if ! $DRY_RUN; then
+    command -v python3 >/dev/null 2>&1 || die "python3 is required for Kolibri."
+    run python3 -m venv "$dir/venv" || die "Failed to create Python venv for Kolibri."
+    run "$dir/venv/bin/pip" install --quiet --upgrade pip kolibri || die "Failed to install Kolibri."
+  else
+    run python3 -m venv "$dir/venv"
+    run "$dir/venv/bin/pip" install --quiet --upgrade pip kolibri
+  fi
   install_service kolibri "Kolibri" \
     "$dir/venv/bin/kolibri start --foreground --port 8082" \
     "KOLIBRI_HOME=$dir/data" "KOLIBRI_LISTEN_ADDRESS=$BIND"
@@ -340,14 +364,22 @@ install_jellyfin() {
   if dpkg -s jellyfin-server >/dev/null 2>&1 || dpkg -s jellyfin >/dev/null 2>&1; then
     echo "Jellyfin is already installed."
   else
-    local script
+    local script status
     script="$(mktemp)"
     download https://repo.jellyfin.org/install-debuntu.sh "$script"
     # On derivatives such as Kali the installer cannot detect the base release and asks for it.
     if ! $DRY_RUN && ! grep -qE '^(DEBIAN|UBUNTU)_CODENAME=' /etc/os-release && [[ ! "${ID:-}" =~ ^(debian|ubuntu|raspbian)$ ]]; then
       echo "Jellyfin's installer will ask for the base distribution: enter 'debian', then the release 'trixie'."
     fi
-    run $SUDO env SKIP_CONFIRM=1 bash "$script"
+    if ! $DRY_RUN; then
+      $SUDO env SKIP_CONFIRM=1 bash "$script" || status=$?
+      if [[ ${status:-0} -ne 0 ]]; then
+        warn "Jellyfin installation script failed with exit code $status. This may be due to architecture or OS incompatibility."
+        die "Jellyfin installation failed. Try manually with: bash '$script'"
+      fi
+    else
+      run $SUDO env SKIP_CONFIRM=1 bash "$script"
+    fi
     rm -f "$script"
   fi
   add_summary "Media Library      http://127.0.0.1:8096  (finish the setup wizard in the browser)"
@@ -355,15 +387,36 @@ install_jellyfin() {
 
 install_cyberchef() {
   log "Installing CyberChef"
-  local dir="$INSTALL_ROOT/cyberchef" zip url
+  local dir="$INSTALL_ROOT/cyberchef" zip url retries=0 max_retries=3
   run mkdir -p "$dir"
   if $DRY_RUN; then
     echo "[dry-run] download and unpack the latest CyberChef release into $dir"
   else
-    url="$(curl -fsS https://api.github.com/repos/gchq/CyberChef/releases/latest \
-      | python3 -c 'import json,sys; print(next(a["browser_download_url"] for a in json.load(sys.stdin)["assets"] if a["name"].endswith(".zip")))')"
-    zip="$(mktemp)"
-    curl -fsSL --retry 3 "$url" -o "$zip"
+    while [[ $retries -lt $max_retries ]]; do
+      url="$(curl -fsS https://api.github.com/repos/gchq/CyberChef/releases/latest \
+        | python3 -c 'import json,sys; print(next(a["browser_download_url"] for a in json.load(sys.stdin)["assets"] if a["name"].endswith(".zip")))')" || {
+        warn "Failed to fetch CyberChef release info (attempt $((retries + 1))/$max_retries)"
+        ((retries++))
+        continue
+      }
+      zip="$(mktemp)"
+      if curl -fsSL --retry 5 --connect-timeout 30 "$url" -o "$zip"; then
+        if unzip -t "$zip" >/dev/null 2>&1; then
+          break
+        else
+          warn "CyberChef zip archive is corrupted (attempt $((retries + 1))/$max_retries)"
+          rm -f "$zip"
+          ((retries++))
+          continue
+        fi
+      else
+        warn "Failed to download CyberChef (attempt $((retries + 1))/$max_retries)"
+        rm -f "$zip"
+        ((retries++))
+        continue
+      fi
+    done
+    [[ $retries -lt $max_retries ]] || die "Failed to download valid CyberChef after $max_retries attempts."
     rm -rf "$dir/site"
     mkdir -p "$dir/site"
     unzip -q -o "$zip" -d "$dir/site"
@@ -380,18 +433,32 @@ install_cyberchef() {
 
 install_meshtastic() {
   log "Installing Meshtastic Web"
-  local dir="$INSTALL_ROOT/meshtastic-web" tarball
+  local dir="$INSTALL_ROOT/meshtastic-web" tarball retries=0 max_retries=3
   run mkdir -p "$dir"
   if $DRY_RUN; then
     echo "[dry-run] download and unpack the latest Meshtastic Web release into $dir"
   else
     tarball="$(mktemp)"
-    curl -fsSL --retry 3 https://github.com/meshtastic/web/releases/latest/download/build.tar -o "$tarball"
+    while [[ $retries -lt $max_retries ]]; do
+      if curl -fsSL --retry 5 --connect-timeout 30 --max-time 120 https://github.com/meshtastic/web/releases/latest/download/build.tar -o "$tarball"; then
+        if tar -tf "$tarball" >/dev/null 2>&1; then
+          break
+        else
+          warn "Meshtastic tarball is corrupted (attempt $((retries + 1))/$max_retries)"
+          ((retries++))
+          continue
+        fi
+      else
+        warn "Failed to download Meshtastic Web (attempt $((retries + 1))/$max_retries)"
+        ((retries++))
+        continue
+      fi
+    done
+    [[ $retries -lt $max_retries ]] || die "Failed to download valid Meshtastic Web after $max_retries attempts."
     rm -rf "$dir/site"
     mkdir -p "$dir/site"
     tar -xf "$tarball" -C "$dir/site"
     rm -f "$tarball"
-    # The release is pre-compressed; a plain static server needs the original files.
     find "$dir/site" -name '*.gz' -exec gunzip -f {} +
     [[ -f "$dir/site/index.html" ]] || die "Meshtastic Web release has no index.html."
   fi
@@ -433,7 +500,9 @@ print_summary() {
   echo "(FlatNotes recommends Docker). Add their addresses under Configure services in the dashboard."
   if [[ ${#FAILED[@]} -gt 0 ]]; then
     echo
-    echo "These failed and can be retried with: bash setup.sh --apps ${FAILED[*]// /,}"
+    local failed_apps
+    failed_apps="$(IFS=,; echo "${FAILED[*]}")"
+    echo "These failed and can be retried with: bash setup.sh --apps $failed_apps"
     printf '  %s\n' "${FAILED[@]}"
     return 1
   fi
