@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ALL_APPS="dashboard ollama openwebui kolibri kiwix jellyfin cyberchef meshtastic"
+ALL_APPS="dashboard ollama openwebui kolibri kiwix jellyfin cyberchef meshcore"
 
 APPS="${OFFGRID_APPS:-}"
 ASSUME_YES=false
@@ -431,12 +431,12 @@ install_cyberchef() {
   add_summary "Data Tools         http://127.0.0.1:8083"
 }
 
-install_meshtastic() {
-  log "Installing Meshtastic Web"
-  local dir="$INSTALL_ROOT/meshtastic-web" tarball retries=0 max_retries=3
+install_meshcore() {
+  log "Installing Meshcore"
+  local dir="$INSTALL_ROOT/meshcore" tarball retries=0 max_retries=3
   run mkdir -p "$dir"
   if $DRY_RUN; then
-    echo "[dry-run] download and unpack the latest Meshtastic Web release into $dir"
+    echo "[dry-run] download and unpack the latest Meshcore release into $dir"
   else
     tarball="$(mktemp)"
     while [[ $retries -lt $max_retries ]]; do
@@ -444,25 +444,25 @@ install_meshtastic() {
         if tar -tf "$tarball" >/dev/null 2>&1; then
           break
         else
-          warn "Meshtastic tarball is corrupted (attempt $((retries + 1))/$max_retries)"
+          warn "Meshcore tarball is corrupted (attempt $((retries + 1))/$max_retries)"
           ((retries++))
           continue
         fi
       else
-        warn "Failed to download Meshtastic Web (attempt $((retries + 1))/$max_retries)"
+        warn "Failed to download Meshcore (attempt $((retries + 1))/$max_retries)"
         ((retries++))
         continue
       fi
     done
-    [[ $retries -lt $max_retries ]] || die "Failed to download valid Meshtastic Web after $max_retries attempts."
+    [[ $retries -lt $max_retries ]] || die "Failed to download valid Meshcore after $max_retries attempts."
     rm -rf "$dir/site"
     mkdir -p "$dir/site"
     tar -xf "$tarball" -C "$dir/site"
     rm -f "$tarball"
     find "$dir/site" -name '*.gz' -exec gunzip -f {} +
-    [[ -f "$dir/site/index.html" ]] || die "Meshtastic Web release has no index.html."
+    [[ -f "$dir/site/index.html" ]] || die "Meshcore release has no index.html."
   fi
-  install_service meshtastic "Meshtastic Web" \
+  install_service meshcore "Meshcore" \
     "$(system_python) -m http.server 8450 --bind $BIND --directory $dir/site"
   add_summary "Mesh Communications http://127.0.0.1:8450  (radio needs Meshtastic hardware; Bluetooth/serial need a Chromium-based browser)"
 }
