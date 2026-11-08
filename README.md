@@ -64,6 +64,16 @@ Open <http://127.0.0.1:4173>. Set `OFFGRID_PORT` to use another port, and `OFFGR
 
 ## Troubleshooting
 
+### Apps failed during setup
+
+The final summary lists failed apps, but their error messages appear earlier in the setup output. Retry the affected apps using a comma-separated list and capture the output for diagnosis:
+
+```bash
+bash setup.sh --apps dashboard,openwebui,kolibri,jellyfin,cyberchef 2>&1 | tee setup-retry.log
+```
+
+Replace the list with the apps that failed. Review the first error under each app's installation heading; remove any sensitive information before sharing the log.
+
 ### Node.js or npm version is too old
 
 Check the installed versions with `node --version` and `npm --version`. This project requires Node.js 20+ and npm 7+. Install a compatible Node.js LTS release, open a new terminal, and run `sh install.sh` again.

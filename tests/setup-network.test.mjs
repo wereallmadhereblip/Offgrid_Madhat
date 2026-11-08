@@ -56,6 +56,12 @@ test('manual startup instructions retain the network bind when systemd is unavai
   assert.match(result.stdout, /env OFFGRID_HOST=0\.0\.0\.0 OFFGRID_PORT=4173 \/bin\/true/);
 });
 
+test('failure summary prints a valid comma-separated retry command', t => {
+  const { result } = runSetup(t, 'FAILED=(dashboard openwebui kolibri jellyfin cyberchef); print_summary');
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /bash setup\.sh --apps dashboard,openwebui,kolibri,jellyfin,cyberchef/);
+});
+
 test('network-bound dashboard responds on a non-loopback address', { timeout: 10000 }, async t => {
   const address = Object.values(networkInterfaces()).flat().find(item => item && item.family === 'IPv4' && !item.internal)?.address;
   if (!address) {
